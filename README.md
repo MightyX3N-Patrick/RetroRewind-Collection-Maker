@@ -26,7 +26,7 @@ The Builder acts as the bridge between online databases and these mods, automati
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/retro-rewind-builder.git](https://github.com/YourUsername/retro-rewind-builder.git)
+    git clone https://github.com/MightyX3N-Patrick/RetroRewind-Collection-Maker.git
     cd retro-rewind-builder
     ```
 
