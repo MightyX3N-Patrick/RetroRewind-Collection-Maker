@@ -6,8 +6,8 @@ Retro Rewind Builder is a companion tool designed to streamline the creation and
 
 To use this tool effectively, you **must** have the following installed:
 
-1.  **Movie Workshop**: [Download from GitHub](https://github.com/BaconCake/retro-rewind-movie-workshop)
-2.  **Custom Movies and Games Mod**: [Download from Nexus Mods](https://www.nexusmods.com/retrorewindvideostoresimulator/mods/82?tab=description)
+1.  **Movie Workshop (GitHub)**: [Download from GitHub](https://github.com/BaconCake/retro-rewind-movie-workshop)
+2.  **Movie Workshop (Nexus Mods)**: [Download from Nexus Mods](https://www.nexusmods.com/retrorewindvideostoresimulator/mods/82?tab=description)
 
 The Builder acts as the bridge between online databases and these mods, automating the JSON formatting and image placement required for the game to recognize your custom content.
 
