@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Rewind Builder</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; background: #111; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar { background: #1a1a1a; border-bottom: 1px solid #2a2a2a; padding: 0 16px; height: 48px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.app-title { font-size: 15px; font-weight: 600; color: #fff; }
+
+.warn-bar { display: none; background: #2a1a00; border-bottom: 1px solid #553300; padding: 8px 16px; font-size: 13px; color: #ffaa44; flex-shrink: 0; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar { width: 220px; background: #161616; border-right: 1px solid #2a2a2a; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+.sidebar-section { border-bottom: 1px solid #2a2a2a; padding: 12px; }
+.sidebar-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #666; margin-bottom: 8px; }
+
+.plugin-btn { display:flex; align-items:center; justify-content:space-between; width:100%; padding:7px 8px; background:none; border:1px solid transparent; border-radius:4px; color:#aaa; font-size:13px; cursor:pointer; text-align:left; margin-bottom:2px; gap:6px; }
+.plugin-btn:hover { background:#222; color:#ddd; }
+.plugin-btn.active { background:#222; border-color:#444; color:#fff; }
+.plugin-btn-label { flex:1; }
+.plugin-btn-name { font-size:13px; }
+.pdot { width:7px; height:7px; border-radius:50%; background:#444; flex-shrink:0; }
+.pdot.ok { background:#4caf50; }
+
+.mode-toggle { display: flex; border: 1px solid #2a2a2a; border-radius: 4px; overflow: hidden; }
+.mode-btn { flex: 1; padding: 5px 12px; background: none; border: none; color: #777; font-size: 13px; cursor: pointer; }
+.mode-btn.active { background: #2a2a2a; color: #fff; }
+
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-bottom: 4px; }
+.stat-row span:last-child { color: #ccc; }
+.ws-ok { color: #4caf50; font-size:12px; }
+.ws-missing { color: #ef4444; font-size:12px; }
+
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.search-bar { background: #1a1a1a; border-bottom: 1px solid #2a2a2a; padding: 10px 16px; flex-shrink: 0; }
+.search-row { display: flex; gap: 8px; align-items: center; }
+.bulk-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-top: 8px; }
+.filter-group { display: flex; flex-direction: column; gap: 3px; }
+.filter-label { font-size: 11px; color: #666; }
+
+input, select { background: #222; border: 1px solid #333; border-radius: 4px; color: #e0e0e0; font-size: 13px; padding: 6px 10px; outline: none; font-family: inherit; }
+input:focus, select:focus { border-color: #555; }
+input::placeholder { color: #555; }
+
+.btn { padding: 6px 14px; border-radius: 4px; border: none; font-size: 13px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+.btn-secondary { background: #2a2a2a; color: #ccc; }
+.btn-secondary:hover { background: #333; color: #fff; }
+.btn-success { background: #166534; color: #86efac; }
+.btn-success:hover { background: #15803d; }
+
+.results-area { flex: 1; overflow-y: auto; padding: 12px 16px; }
+.results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.results-count { font-size: 13px; color: #888; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+
+.card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; overflow: hidden; cursor: pointer; transition: border-color .15s; position: relative; }
+.card:hover { border-color: #444; }
+.card.selected { border-color: #2563eb; }
+.card-check { display:none; position:absolute; top:6px; right:6px; background:#2563eb; border-radius:50%; width:20px; height:20px; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+.card.selected .card-check { display: flex; }
+.card-img { width:100%; aspect-ratio:2/3; object-fit:cover; display:block; background:#222; }
+.card-placeholder { width:100%; aspect-ratio:2/3; background:#222; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:8px; text-align:center; }
+.card-placeholder-title { font-size:11px; color:#888; line-height:1.3; word-break:break-word; }
+.card-body { padding:6px 8px 8px; }
+.card-title { font-size:12px; font-weight:500; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-meta { font-size:11px; color:#666; margin-top:2px; display:flex; justify-content:space-between; }
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:200px; color:#555; gap:8px; font-size:13px; }
+
+.drawer { width:300px; background:#161616; border-left:1px solid #2a2a2a; display:flex; flex-direction:column; flex-shrink:0; }
+.drawer-header { padding:12px 14px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.drawer-title { font-size:14px; font-weight:600; color:#fff; }
+.drawer-list { flex:1; overflow-y:auto; padding:8px; }
+.drawer-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:4px; margin-bottom:2px; }
+.drawer-item:hover { background:#1e1e1e; }
+.drawer-thumb { width:30px; height:45px; object-fit:cover; border-radius:2px; background:#222; flex-shrink:0; }
+.drawer-info { flex:1; min-width:0; }
+.drawer-name { font-size:12px; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.drawer-sub { font-size:11px; color:#666; }
+.drawer-rm { background:none; border:none; color:#555; cursor:pointer; font-size:16px; padding:2px 4px; line-height:1; flex-shrink:0; }
+.drawer-rm:hover { color:#e55; }
+.drawer-footer { padding:12px; border-top:1px solid #2a2a2a; display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.export-btn { width:100%; padding:9px; background:#166534; border:none; border-radius:4px; color:#86efac; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+.export-btn:hover { background:#15803d; }
+.export-btn:disabled { background:#1e293b; color:#475569; cursor:not-allowed; }
+
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:#1a1a1a; border:1px solid #333; border-radius:8px; width:460px; max-width:95vw; max-height:85vh; overflow-y:auto; }
+.modal-header { padding:14px 16px; border-bottom:1px solid #2a2a2a; display:flex; justify-content:space-between; align-items:center; }
+.modal-title { font-size:15px; font-weight:600; color:#fff; }
+.close-btn { background:none; border:none; color:#777; font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
+.close-btn:hover { color:#ccc; }
+.modal-body { padding:16px; }
+.form-group { margin-bottom:10px; }
+.form-label { display:block; font-size:11px; color:#888; margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; }
+.form-group input { width:100%; }
+.form-desc { font-size:12px; color:#555; margin-bottom:8px; }
+.form-desc a { color:#60a5fa; }
+.section-div { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#555; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:6px; }
+.form-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+.toast { position:fixed; bottom:16px; right:16px; background:#222; border:1px solid #333; border-radius:6px; padding:10px 16px; font-size:13px; color:#ddd; z-index:1000; transform:translateY(60px); opacity:0; transition:transform .2s, opacity .2s; max-width:320px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.error { border-color:#7f1d1d; color:#fca5a5; }
+.toast.success { border-color:#166534; color:#86efac; }
+
+.loading-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:400; align-items:center; justify-content:center; }
+.loading-overlay.show { display:flex; }
+.spinner { width:32px; height:32px; border:3px solid #333; border-top-color:#2563eb; border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#333; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="app-title">Retro Rewind Builder</div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-secondary" onclick="showSettings()">Settings</button>
+    <button class="btn btn-primary" onclick="toggleDrawer()">
+      Collection <span id="collCount" style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:10px;font-size:12px;">0</span>
+    </button>
+  </div>
+</div>
+
+<div class="warn-bar" id="warnBar"></div>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Plugin</div>
+      <div id="pluginList"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Mode</div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeInd" onclick="setMode('individual')">Individual</button>
+        <button class="mode-btn" id="modeBulk" onclick="setMode('bulk')">Bulk</button>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Collection</div>
+      <div class="stat-row"><span>Total</span><span id="statTotal">0</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Movie Workshop</div>
+      <div id="wsStatus" style="font-size:12px;">Checking...</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="search-bar">
+      <div id="modeIndDiv">
+        <div class="search-row">
+          <input type="text" id="searchInput" placeholder="Search for a title..." onkeyup="if(event.key==='Enter')doSearch()" style="flex:1">
+          <input type="number" id="searchYear" placeholder="Year" style="width:80px;">
+          <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+      <div id="modeBulkDiv" style="display:none;">
+        <div class="bulk-row">
+          <div class="filter-group"><span class="filter-label">From</span><input type="number" id="yearFrom" value="1985" style="width:72px;"></div>
+          <div class="filter-group"><span class="filter-label">To</span><input type="number" id="yearTo" value="1995" style="width:72px;"></div>
+          <div class="filter-group"><span class="filter-label">Genre</span><select id="genreFilter" style="width:120px;"><option value="">All</option></select></div>
+          <div class="filter-group" id="platformGroup" style="display:none;"><span class="filter-label">Platform</span><select id="platformFilter" style="width:130px;"><option value="">All</option></select></div>
+          <div class="filter-group"><span class="filter-label">Min rating</span><select id="minRating" style="width:75px;"><option value="0">Any</option><option value="5">5+</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></div>
+          <div class="filter-group"><span class="filter-label">Limit</span><input type="number" id="limitSel" value="50" min="1" style="width:75px;"></div>
+          <button class="btn btn-primary" onclick="doBulk()" style="align-self:flex-end;">Fetch</button>
+        </div>
+      </div>
+    </div>
+    <div class="results-area" id="resultsArea">
+      <div class="empty"><span>No results yet</span><span style="font-size:12px;">Search or use Bulk mode</span></div>
+    </div>
+  </div>
+
+  <div class="drawer" id="drawer" style="display:none;">
+    <div class="drawer-header">
+      <span class="drawer-title">Collection</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="clearCol()">Clear</button>
+        <button class="close-btn" onclick="toggleDrawer()">✕</button>
+      </div>
+    </div>
+    <div class="drawer-list" id="drawerList"><div class="empty" style="height:120px;font-size:12px;">Empty</div></div>
+    <div class="drawer-footer">
+      <button class="export-btn" id="exportBtn" onclick="exportToWorkshop(false)" disabled>Export to Movie Workshop →</button>
+      <button class="btn btn-danger" id="overwriteBtn" onclick="exportToWorkshop(true)" disabled style="width:100%;font-size:12px;">Overwrite existing Workshop data</button>
+      <div id="exportStatus" style="font-size:12px;color:#888;text-align:center;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS — built dynamically from plugin API -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="close-btn" onclick="hideSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="section-div">Movie Workshop</div>
+      <div class="form-group">
+        <label class="form-label">Workshop Folder</label>
+        <p class="form-desc">Path to your RR_Movie_Workshop folder (auto-detected from Desktop)</p>
+        <input type="text" id="cfgWorkshop" placeholder="C:\Users\...\RRWorkshop">
+      </div>
+      <div id="pluginSettings"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-secondary" onclick="hideSettings()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let plugin = null;
+let pluginInfos = {};
+let mode = 'individual';
+let collection = [];
+let results = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadPlugins();
+  await fetchCollection();
+  await loadStatus();
+});
+
+// ── PLUGINS (fully dynamic) ──────────────────────────────────────────────
+
+async function loadPlugins() {
+  const r = await fetch('/api/plugins');
+  pluginInfos = await r.json();
+
+  const list = document.getElementById('pluginList');
+  list.innerHTML = '';
+  let first = null;
+
+  for (const [id, info] of Object.entries(pluginInfos)) {
+    if (!first) first = id;
+    const btn = document.createElement('button');
+    btn.className = 'plugin-btn';
+    btn.dataset.plugin = id;
+    btn.onclick = () => selectPlugin(id, btn);
+    btn.innerHTML = `
+      <span>${info.icon}</span>
+      <span class="plugin-btn-label"><span class="plugin-btn-name">${info.name}</span></span>
+      <span class="pdot ${info.configured ? 'ok' : ''}" id="dot-${id}"></span>`;
+    list.appendChild(btn);
+  }
+
+  if (first) selectPlugin(first, list.querySelector('[data-plugin="' + first + '"]'));
+}
+
+function selectPlugin(id, btn) {
+  plugin = id;
+  document.querySelectorAll('.plugin-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const info = pluginInfos[id];
+  document.getElementById('platformGroup').style.display = info?.has_platforms ? '' : 'none';
+  loadGenres();
+  if (info?.has_platforms) loadPlatforms();
+}
+
+async function loadStatus() {
+  const [sr, pr] = await Promise.all([fetch('/api/status'), fetch('/api/plugins')]);
+  const s = await sr.json();
+  pluginInfos = await pr.json();
+
+  // Update dots
+  for (const [id, info] of Object.entries(pluginInfos)) {
+    const dot = document.getElementById(`dot-${id}`);
+    if (dot) dot.classList.toggle('ok', info.configured);
+  }
+
+  const anyConfigured = Object.values(pluginInfos).some(p => p.configured);
+  const warns = [];
+  if (!anyConfigured) warns.push('No plugins configured — open Settings');
+  if (!s.workshop_found) warns.push('Movie Workshop not found — open Settings to set path');
+  const bar = document.getElementById('warnBar');
+  bar.style.display = warns.length ? 'block' : 'none';
+  if (warns.length) bar.textContent = '⚠ ' + warns.join('  |  ');
+
+  document.getElementById('wsStatus').innerHTML = s.workshop_found
+    ? `<span class="ws-ok">✓ Found</span><br><span style="font-size:11px;color:#555;">${esc(s.workshop_dir)}</span>`
+    : '<span class="ws-missing">✗ Not found — set path in Settings</span>';
+}
+
+async function loadGenres() {
+  const r = await fetch(`/api/genres?plugin=${plugin}`);
+  const genres = await r.json();
+  const sel = document.getElementById('genreFilter');
+  sel.innerHTML = '<option value="">All</option>';
+  genres.forEach(g => { const o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o); });
+}
+
+async function loadPlatforms() {
+  const r = await fetch(`/api/platforms?plugin=${plugin}`);
+  const platforms = await r.json();
+  const sel = document.getElementById('platformFilter');
+  sel.innerHTML = '<option value="">All platforms</option>';
+  platforms.forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+}
+
+// ── SETTINGS (built from plugin config_fields) ───────────────────────────
+
+async function showSettings() {
+  document.getElementById('settingsModal').classList.add('show');
+  const [sr, pr] = await Promise.all([fetch('/api/settings'), fetch('/api/plugins')]);
+  const saved = await sr.json();
+  const plugins = await pr.json();
+  const savedPlugins = saved.plugins || {};
+
+  document.getElementById('cfgWorkshop').value = saved.workshop_dir || '';
+  // Also show auto-detected path as placeholder if not manually set
+  if (!saved.workshop_dir) {
+    const sr2 = await fetch('/api/status');
+    const s2 = await sr2.json();
+    if (s2.workshop_dir) {
+      const el = document.getElementById('cfgWorkshop');
+      el.placeholder = s2.workshop_dir + ' (auto-detected)';
+    }
+  }
+
+  const container = document.getElementById('pluginSettings');
+  container.innerHTML = '';
+  for (const [id, info] of Object.entries(plugins)) {
+    const savedCfg = savedPlugins[id] || {};
+    const section = document.createElement('div');
+
+    // Section header
+    const header = document.createElement('div');
+    header.className = 'section-div';
+    header.innerHTML = `${info.icon} ${esc(info.name)}`;
+    section.appendChild(header);
+
+    if (info.config_fields && info.config_fields.length) {
+      const fields = info.config_fields;
+      const wrap = document.createElement('div');
+      if (fields.length > 1) wrap.className = 'form-grid2';
+      wrap.innerHTML = fields.map(f => fieldHtml(id, f, savedCfg[f.key] || '')).join('');
+      section.appendChild(wrap);
+    }
+
+    container.appendChild(section);
+  }
+}
+
+function fieldHtml(pluginId, field, value) {
+  const id = `cfg_${pluginId}_${field.key}`;
+  if (field.type === 'select') {
+    const opts = (field.options||[]).map(o =>
+      `<option value="${esc(o.value)}" ${o.value==value?'selected':''}>${esc(o.label)}</option>`
+    ).join('');
+    return `<div class="form-group">
+      <label class="form-label">${esc(field.label)}</label>
+      <select id="${id}" data-plugin="${pluginId}" data-key="${field.key}" style="width:100%;">${opts}</select>
+    </div>`;
+  }
+  return `<div class="form-group">
+    <label class="form-label">${esc(field.label)}${field.hint ? ` <span style="color:#555;font-weight:normal;text-transform:none;letter-spacing:0;">— ${esc(field.hint)}</span>` : ''}</label>
+    <input type="${field.type}" id="${id}" data-plugin="${pluginId}" data-key="${field.key}" placeholder="${esc(field.label)}" value="${esc(value)}">
+  </div>`;
+}
+
+function hideSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+
+async function saveSettings() {
+  const ws = document.getElementById('cfgWorkshop').value.trim();
+  if (ws) await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workshop_dir:ws})});
+
+  // Collect all plugin field values grouped by plugin
+  const byPlugin = {};
+  document.querySelectorAll('#pluginSettings input[data-plugin], #pluginSettings select[data-plugin]').forEach(inp => {
+    const pid = inp.dataset.plugin;
+    const key = inp.dataset.key;
+    if (!byPlugin[pid]) byPlugin[pid] = {};
+    byPlugin[pid][key] = inp.value.trim();
+  });
+
+  for (const [pid, config] of Object.entries(byPlugin)) {
+    await fetch('/api/plugin_config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plugin:pid, config})});
+  }
+
+  hideSettings();
+  await loadStatus();
+  toast('Settings saved');
+}
+
+// ── MODE ─────────────────────────────────────────────────────────────────
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeIndDiv').style.display = m==='individual' ? '' : 'none';
+  document.getElementById('modeBulkDiv').style.display = m==='bulk' ? '' : 'none';
+  document.getElementById('modeInd').classList.toggle('active', m==='individual');
+  document.getElementById('modeBulk').classList.toggle('active', m==='bulk');
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────
+
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const year = document.getElementById('searchYear').value;
+  setLoading(true);
+  const r = await fetch(`/api/search?plugin=${plugin}&q=${encodeURIComponent(q)}${year?'&year='+year:''}`);
+  results = await r.json();
+  renderResults();
+  setLoading(false);
+}
+
+async function doBulk() {
+  const params = new URLSearchParams({
+    plugin,
+    year_from:  document.getElementById('yearFrom').value,
+    year_to:    document.getElementById('yearTo').value,
+    genre:      document.getElementById('genreFilter').value,
+    platform:   document.getElementById('platformFilter').value,
+    min_rating: document.getElementById('minRating').value,
+    limit:      parseInt(document.getElementById('limitSel').value) || 50,
+  });
+  setLoading(true);
+  const r = await fetch(`/api/bulk?${params}`);
+  const data = await r.json();
+  if (data.error) { toast(data.error, true); setLoading(false); return; }
+  results = data;
+  const yf = document.getElementById('yearFrom').value;
+  const yt = document.getElementById('yearTo').value;
+  const g  = document.getElementById('genreFilter').value;
+  renderResults(`${pluginInfos[plugin]?.name||plugin}${g?' · '+g:''} · ${yf}–${yt}`);
+  setLoading(false);
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────
+
+function renderResults(subtitle='') {
+  const area = document.getElementById('resultsArea');
+  if (!results.length) { area.innerHTML = '<div class="empty"><span>No results</span></div>'; return; }
+  const ids = new Set(collection.map(i=>i.id));
+  area.innerHTML = `
+    <div class="results-header">
+      <span class="results-count">${results.length} results${subtitle?' — '+esc(subtitle):''}</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" onclick="addAll()" style="font-size:12px;padding:5px 10px;">Add all</button>
+      </div>
+    </div>
+    <div class="grid">${results.map(item=>card(item,ids.has(item.id))).join('')}</div>`;
+}
+
+function card(item, sel) {
+  const img = item.cover_url
+    ? `<img class="card-img" src="${esc(item.cover_url)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const ph = item.cover_url ? 'style="display:none"' : '';
+  const icon = pluginInfos[item.plugin]?.icon || '🎬';
+  return `<div class="card${sel?' selected':''}" id="c-${esc(item.id)}" onclick="toggleCard('${esc(item.id)}')">
+    <div class="card-check">✓</div>
+    ${img}
+    <div class="card-placeholder" ${ph}><span style="font-size:18px;">${icon}</span><span class="card-placeholder-title">${esc(item.title)}</span></div>
+    <div class="card-body">
+      <div class="card-title">${esc(item.title)}</div>
+      <div class="card-meta"><span>${item.year||'–'}</span><span>★ ${item.rating||'?'}</span></div>
+    </div>
+  </div>`;
+}
+
+// ── COLLECTION ───────────────────────────────────────────────────────────
+
+function toggleCard(id) {
+  const item = results.find(r=>r.id===id);
+  if (!item) return;
+  if (collection.some(i=>i.id===id)) serverRemove(id);
+  else serverAdd(item);
+}
+
+async function addAll() {
+  const existing = new Set(collection.map(i=>i.id));
+  const toAdd = results.filter(r=>!existing.has(r.id));
+  if (!toAdd.length) return;
+  const r = await fetch('/api/collection/add_bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:toAdd})});
+  const d = await r.json();
+  setCollection(d.items);
+  toast(`Added ${d.added}`);
+}
+
+async function fetchCollection() {
+  setCollection(await (await fetch('/api/collection')).json());
+}
+
+async function serverAdd(item) {
+  setCollection((await (await fetch('/api/collection/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item})})).json()).items);
+}
+
+async function serverRemove(id) {
+  setCollection((await (await fetch('/api/collection/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})})).json()).items);
+}
+
+async function removeItem(id) { await serverRemove(id); }
+
+async function clearCol() {
+  if (!confirm('Clear collection?')) return;
+  setCollection((await (await fetch('/api/collection/clear',{method:'POST'})).json()).items);
+}
+
+function setCollection(items) {
+  collection = items;
+  const count = items.length;
+  document.getElementById('collCount').textContent = count;
+  document.getElementById('statTotal').textContent = count;
+  document.getElementById('exportBtn').disabled = count === 0;
+  document.getElementById('overwriteBtn').disabled = count === 0;
+  document.querySelectorAll('.card').forEach(c => {
+    c.classList.toggle('selected', items.some(i=>i.id===c.id.replace('c-','')));
+  });
+  const list = document.getElementById('drawerList');
+  if (!count) { list.innerHTML='<div class="empty" style="height:120px;font-size:12px;">Empty</div>'; return; }
+  list.innerHTML = items.map(item=>`
+    <div class="drawer-item">
+      ${item.cover_url
+        ? `<img class="drawer-thumb" src="${esc(item.cover_url)}" loading="lazy">`
+        : `<div class="drawer-thumb" style="display:flex;align-items:center;justify-content:center;font-size:16px;">${pluginInfos[item.plugin]?.icon||'🎬'}</div>`}
+      <div class="drawer-info">
+        <div class="drawer-name">${esc(item.title)}</div>
+        <div class="drawer-sub">${item.year||''} · ${item.genre||''} · ${item.plugin||''}</div>
+      </div>
+      <button class="drawer-rm" onclick="removeItem('${esc(item.id)}')">×</button>
+    </div>`).join('');
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────────
+
+async function exportToWorkshop(overwrite=false) {
+  if (overwrite && !confirm('This will clear all existing Movie Workshop data and replace it with your collection. Continue?')) return;
+  document.getElementById('exportBtn').disabled = true;
+  document.getElementById('exportStatus').textContent = overwrite ? 'Overwriting...' : 'Exporting...';
+  setLoading(true);
+  const r = await fetch('/api/export_to_workshop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({overwrite})});
+  const d = await r.json();
+  setLoading(false);
+  document.getElementById('exportBtn').disabled = false;
+  if (d.ok) {
+    document.getElementById('exportStatus').textContent = d.message;
+    toast('Exported! Click "Ship to Store" in Movie Workshop.', false, 'success');
+  } else {
+    document.getElementById('exportStatus').textContent = d.error;
+    toast(d.error, true);
+  }
+}
+
+function toggleDrawer() {
+  const d = document.getElementById('drawer');
+  d.style.display = d.style.display==='none' ? '' : 'none';
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+
+function setLoading(s) { document.getElementById('loadingOverlay').classList.toggle('show',s); }
+
+function toast(msg, error=false, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show${error?' error':type==='success'?' success':''}`;
+  setTimeout(()=>el.classList.remove('show'), 4000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
