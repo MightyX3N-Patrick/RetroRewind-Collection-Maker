@@ -1,10 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_file
-import os, json, urllib.request, urllib.parse, time
+import os, json, urllib.request, urllib.parse, time, importlib, inspect
 from pathlib import Path
-from plugins.tmdb_plugin import TMDBPlugin
-from plugins.screenscraper_plugin import ScrapperPlugin
-from plugins.igdb_plugin import IGDBPlugin
-from plugins.steamgriddb_plugin import SteamGridDBPlugin
+from plugins.base import BasePlugin
 
 app = Flask(__name__)
 BASE_DIR = Path(__file__).parent
@@ -150,12 +147,24 @@ def sku_for(genre: str, idx: int, rating: float) -> int:
 
 # ── PLUGINS ───────────────────────────────────────────────────────────────
 
-PLUGINS = {
-    'tmdb': TMDBPlugin(),
-    'screenscraper': ScrapperPlugin(),
-    'igdb': IGDBPlugin(),
-    'steamgriddb': SteamGridDBPlugin(),
-}
+def _discover_plugins() -> dict:
+    """Auto-load every *_plugin.py in the plugins/ folder."""
+    found = {}
+    plugins_dir = BASE_DIR / 'plugins'
+    for path in sorted(plugins_dir.glob('*_plugin.py')):
+        module_name = f'plugins.{path.stem}'
+        try:
+            mod = importlib.import_module(module_name)
+            for _, cls in inspect.getmembers(mod, inspect.isclass):
+                if issubclass(cls, BasePlugin) and cls is not BasePlugin:
+                    key = path.stem.replace('_plugin', '')
+                    found[key] = cls()
+                    break
+        except Exception as e:
+            print(f'Plugin load error ({path.name}): {e}')
+    return found
+
+PLUGINS = _discover_plugins()
 
 def apply_saved_settings():
     s = load_settings()
@@ -165,6 +174,25 @@ def apply_saved_settings():
 
 apply_saved_settings()
 
+# Let plugins register their own Flask routes
+for _plugin in PLUGINS.values():
+    try:
+        _plugin.routes(app)
+    except Exception as _e:
+        print(f"Plugin routes error ({_plugin.name}): {_e}")
+
+def _collect_hook(hook: str) -> str:
+    """Collect and concatenate a named HTML/JS hook from all plugins."""
+    parts = []
+    for p in PLUGINS.values():
+        try:
+            val = getattr(p, hook, lambda: "")()
+            if val:
+                parts.append(val)
+        except Exception as e:
+            print(f"Plugin {hook} error ({p.name}): {e}")
+    return "\n".join(parts)
+
 # ── ROUTES ─────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -172,7 +200,11 @@ def index():
     workshop = find_workshop()
     return render_template("index.html",
         workshop_found=workshop is not None,
-        workshop_dir=str(workshop) if workshop else ""
+        workshop_dir=str(workshop) if workshop else "",
+        plugin_sidebar_html=_collect_hook("sidebar_html"),
+        plugin_head_html=_collect_hook("head_html"),
+        plugin_body_html=_collect_hook("body_html"),
+        plugin_js_html=_collect_hook("js_html"),
     )
 
 @app.route("/api/status")
